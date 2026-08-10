@@ -1,0 +1,57 @@
+
+<div class="body" style="padding:32px;color:#333;line-height:1.6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+
+    ```
+    <h2 style="margin-top:0;color:#1a1a2e;font-size:24px;font-weight:700;">
+        Verify Your Email Address
+    </h2>
+
+    <p style="margin-bottom:16px;font-size:15px;">
+        Hello <strong th:text="${name}">User</strong>,
+    </p>
+
+    <p style="margin-bottom:16px;font-size:15px;">
+        Thank you for registering with <strong>Marketplace</strong>.
+        To activate your account and start shopping, please verify your email address.
+    </p>
+
+    <div style="text-align:center;margin:32px 0;">
+        <a th:href="${verificationLink}"
+           style="display:inline-block;
+              background:#e94560;
+              color:#ffffff;
+              text-decoration:none;
+              padding:14px 32px;
+              border-radius:8px;
+              font-weight:600;
+              font-size:15px;">
+            Verify Email
+        </a>
+    </div>
+
+    <p style="margin-bottom:12px;font-size:14px;color:#555;">
+        If the button above doesn't work, copy and paste this link into your browser:
+    </p>
+
+    <div style="background:#f8f9fa;
+            padding:12px;
+            border-radius:6px;
+            word-break:break-all;
+            font-size:13px;
+            color:#444;">
+        <span th:text="${verificationLink}"></span>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+
+    <p style="font-size:14px;color:#666;">
+        If you did not create an account with Marketplace, you can safely ignore this email.
+    </p>
+
+    <p style="font-size:14px;color:#666;margin-top:24px;">
+        Thanks,<br>
+        <strong>Marketplace Team</strong>
+    </p>
+    ```
+
+</div>

@@ -1,0 +1,49 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+               background: #f4f4f5; margin: 0; padding: 0; }
+        .wrapper { max-width: 600px; margin: 32px auto; background: #fff;
+                   border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .header { background: #1a1a2e; padding: 28px 32px; }
+        .header h1 { color: #fff; margin: 0; font-size: 22px; }
+        .header p  { color: #a0a0b0; margin: 4px 0 0; font-size: 13px; }
+        .body   { padding: 32px; color: #333; line-height: 1.6; }
+        .body h2 { margin-top: 0; color: #1a1a2e; }
+        .info-box { background: #eff6ff; border-left: 4px solid #3b82f6;
+                    padding: 16px 20px; border-radius: 0 6px 6px 0; margin: 20px 0; }
+        .footer { background: #f4f4f5; padding: 20px 32px; text-align: center;
+                  font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="header">
+        <h1>🛍️ Marketplace</h1>
+        <p>Your trusted multi-vendor platform</p>
+    </div>
+    <div class="body">
+        <h2>Application Received!</h2>
+        <p>Hi <strong th:text="${vendorName}">Vendor</strong>,</p>
+        <p>Thank you for applying to sell on Marketplace. We've received your application for
+            <strong th:text="${storeName}">Your Store</strong> and our team is reviewing it.</p>
+        <div class="info-box">
+            <strong>What happens next?</strong>
+            <ul style="margin: 8px 0 0; padding-left: 20px;">
+                <li>Our team will review your application within 2–3 business days.</li>
+                <li>You'll receive an email once a decision is made.</li>
+                <li>If approved, you can start listing products immediately.</li>
+            </ul>
+        </div>
+        <p>If you have any questions, please reach out to our vendor support team.</p>
+        <p>Best regards,<br/><strong>The Marketplace Team</strong></p>
+    </div>
+    <div class="footer">
+        <p>© 2025 Marketplace. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

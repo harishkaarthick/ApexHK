@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+               background: #f4f4f5; margin: 0; padding: 0; }
+        .wrapper { max-width: 600px; margin: 32px auto; background: #fff;
+                   border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .header { background: #1e40af; padding: 28px 32px; }
+        .header h1 { color: #fff; margin: 0; font-size: 22px; }
+        .header p  { color: #bfdbfe; margin: 4px 0 0; font-size: 13px; }
+        .body   { padding: 32px; color: #333; line-height: 1.6; }
+        .body h2 { margin-top: 0; color: #1e40af; }
+        .amount-box { background: #eff6ff; border-radius: 8px; padding: 24px;
+                      text-align: center; margin: 20px 0; }
+        .amount { font-size: 36px; font-weight: 700; color: #1e40af; }
+        .amount-label { color: #666; font-size: 14px; margin-top: 4px; }
+        .details { background: #f9fafb; border-radius: 6px; padding: 16px 20px;
+                   font-size: 14px; margin: 16px 0; }
+        .details .row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .footer { background: #f4f4f5; padding: 20px 32px; text-align: center;
+                  font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="header">
+        <h1>💰 Refund Processed!</h1>
+        <p>Your money is on its way</p>
+    </div>
+    <div class="body">
+        <h2>Hi <span th:text="${customerName}">Customer</span>!</h2>
+        <p>Your refund has been successfully processed.</p>
+
+        <div class="amount-box">
+            <div class="amount" th:text="'₹' + refundAmount">₹0</div>
+            <div class="amount-label">Refund Amount</div>
+        </div>
+
+        <div class="details">
+            <div class="row">
+                <span style="color:#555;">Order ID</span>
+                <strong th:text="${orderId}">ORD-001</strong>
+            </div>
+            <div class="row">
+                <span style="color:#555;">Credited To</span>
+                <strong>Your Wallet</strong>
+            </div>
+            <div class="row">
+                <span style="color:#555;">Status</span>
+                <strong style="color:#1e40af;">Completed</strong>
+            </div>
+        </div>
+
+        <p style="font-size: 14px; color: #555;">
+            The refund has been credited to your Marketplace wallet. You can use it for
+            your next purchase. If you requested a bank refund via Razorpay, it may take
+            5–7 additional business days to reflect in your account.</p>
+
+        <p>Thank you for your patience!<br/><strong>The Marketplace Team</strong></p>
+    </div>
+    <div class="footer">
+        <p>© 2025 Marketplace. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

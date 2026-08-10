@@ -1,0 +1,47 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+               background: #f4f4f5; margin: 0; padding: 0; }
+        .wrapper { max-width: 600px; margin: 32px auto; background: #fff;
+                   border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .header { background: #1a1a2e; padding: 28px 32px; }
+        .header h1 { color: #fff; margin: 0; font-size: 22px; }
+        .header p  { color: #a0a0b0; margin: 4px 0 0; font-size: 13px; }
+        .body   { padding: 32px; color: #333; line-height: 1.6; }
+        .body h2 { margin-top: 0; color: #1a1a2e; }
+        .reason-box { background: #fff7ed; border-left: 4px solid #f97316;
+                      padding: 16px 20px; border-radius: 0 6px 6px 0; margin: 20px 0; }
+        .footer { background: #f4f4f5; padding: 20px 32px; text-align: center;
+                  font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="header">
+        <h1>🛍️ Marketplace</h1>
+        <p>Vendor Application Update</p>
+    </div>
+    <div class="body">
+        <h2>Application Update</h2>
+        <p>Hi <strong th:text="${vendorName}">Vendor</strong>,</p>
+        <p>Thank you for your interest in selling on Marketplace. After reviewing your application
+            for <strong th:text="${storeName}">Your Store</strong>, we're unable to approve it at
+            this time.</p>
+        <div class="reason-box">
+            <strong>Reason:</strong>
+            <p th:text="${reason}" style="margin: 8px 0 0;">Reason for rejection</p>
+        </div>
+        <p>You're welcome to address the issues above and reapply. If you believe this decision
+            was made in error, please contact our support team.</p>
+        <p>Best regards,<br/><strong>The Marketplace Team</strong></p>
+    </div>
+    <div class="footer">
+        <p>© 2025 Marketplace. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .font-brand {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+}
+
+@layer base {
+  :root {
+    --skeleton-from: #e2e8f0;
+    --skeleton-mid: #f1f5f9;
+  }
+
+  .dark {
+    --skeleton-from: #1e1e2e;
+    --skeleton-mid: #2a2a3e;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-300 dark:bg-background-dark dark:text-foreground-dark;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  /* Focus ring */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-500;
+  }
+}
+
+@layer components {
+  /* Button base */
+  .btn {
+    @apply inline-flex h-12 items-center justify-center gap-2 rounded-full px-6
+           text-sm font-bold transition-all duration-300 focus-visible:outline-none
+           focus-visible:ring-2 focus-visible:ring-primary-500 disabled:pointer-events-none
+           disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .btn-primary,
+  .btn-premium {
+    @apply btn bg-gradient-to-r from-accent-indigo to-accent-purple text-white shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/35 dark:shadow-primary-500/30;
+  }
+
+  .btn-outline,
+  .btn-premium-secondary {
+    @apply btn border border-white/30 bg-white/70 text-foreground shadow-lg shadow-slate-900/5 backdrop-blur-md hover:bg-white/85 hover:shadow-xl dark:border-white/10 dark:bg-white/10 dark:text-foreground-dark dark:shadow-black/20 dark:hover:bg-white/15;
+  }
+
+  .btn-ghost {
+    @apply btn text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5;
+  }
+
+  .btn-danger,
+  .btn-premium-danger {
+    @apply btn bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/35 dark:shadow-red-500/30;
+  }
+
+  /* Form input */
+  .input {
+    @apply w-full rounded-xl border border-border bg-surface px-3 py-2
+           text-sm text-foreground placeholder-slate-400 transition-colors
+           focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
+           disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70
+           dark:border-border-dark dark:bg-surface-dark dark:text-foreground-dark dark:disabled:bg-slate-900;
+  }
+
+  .input-error {
+    @apply border-error focus:border-error focus:ring-error;
+  }
+
+  /* Card */
+  .card {
+    @apply rounded-2xl border border-border bg-surface shadow-card dark:border-border-dark dark:bg-surface-dark;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+
+  .glass-panel {
+    @apply border border-white/20 bg-white/80 backdrop-blur-md dark:border-white/10 dark:bg-surface-dark/80;
+  }
+}

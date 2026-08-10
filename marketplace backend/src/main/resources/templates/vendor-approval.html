@@ -1,0 +1,53 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+               background: #f4f4f5; margin: 0; padding: 0; }
+        .wrapper { max-width: 600px; margin: 32px auto; background: #fff;
+                   border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .header { background: #166534; padding: 28px 32px; }
+        .header h1 { color: #fff; margin: 0; font-size: 22px; }
+        .header p  { color: #bbf7d0; margin: 4px 0 0; font-size: 13px; }
+        .body   { padding: 32px; color: #333; line-height: 1.6; }
+        .body h2 { margin-top: 0; color: #166534; }
+        .btn { display: inline-block; background: #16a34a; color: #fff;
+               text-decoration: none; padding: 12px 28px; border-radius: 6px;
+               font-weight: 600; font-size: 15px; margin: 8px 0 24px; }
+        .steps { background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .steps ol { margin: 8px 0 0; padding-left: 20px; }
+        .steps li { margin-bottom: 8px; }
+        .footer { background: #f4f4f5; padding: 20px 32px; text-align: center;
+                  font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="header">
+        <h1>🎉 Congratulations!</h1>
+        <p>Your store has been approved</p>
+    </div>
+    <div class="body">
+        <h2>Welcome to the Marketplace Family!</h2>
+        <p>Hi <strong th:text="${vendorName}">Vendor</strong>,</p>
+        <p>Great news! Your store <strong th:text="${storeName}">Your Store</strong> has been
+            <strong style="color:#166534;">approved</strong>. You can now start selling on Marketplace!</p>
+        <div class="steps">
+            <strong>Get started in 3 steps:</strong>
+            <ol>
+                <li>Log in to your vendor dashboard</li>
+                <li>Add your first products with images and descriptions</li>
+                <li>Share your store link with customers</li>
+            </ol>
+        </div>
+        <a href="#" class="btn">Go to Vendor Dashboard</a>
+        <p>Best regards,<br/><strong>The Marketplace Team</strong></p>
+    </div>
+    <div class="footer">
+        <p>© 2025 Marketplace. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>
