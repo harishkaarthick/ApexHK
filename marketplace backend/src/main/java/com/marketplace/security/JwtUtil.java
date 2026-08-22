@@ -32,6 +32,8 @@ public class JwtUtil {
             throw new IllegalStateException(
                     "JWT secret must be at least 32 bytes long");
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        log.info("JWT configuration loaded: accessExpiryMs={}, refreshExpiryMs={}, secretBytes={}",
+                accessExpiry, refreshExpiry, secret.getBytes(StandardCharsets.UTF_8).length);
     }
 
     // ── Token generation ──────────────────────────────────────────────────────

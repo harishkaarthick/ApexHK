@@ -33,10 +33,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String token = extractToken(request);
+        boolean hasBearerToken = token != null;
 
-        if (token != null && jwtUtil.validateToken(token)) {
+        if (requiresAuthentication(request)) {
+            log.debug("JWT auth check for URI {}: bearer token present={}",
+                    request.getRequestURI(), hasBearerToken);
+        }
+
+        if (hasBearerToken && jwtUtil.validateToken(token)) {
             if (isTokenBlacklisted(token)) {
-                log.debug("Rejected blacklisted token for URI: {}", request.getRequestURI());
+                log.warn("JWT auth rejected for URI {}: token is blacklisted or Redis is unavailable",
+                        request.getRequestURI());
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -45,9 +52,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String email  = jwtUtil.extractEmail(token);
                 // FIX BUG 9: read userId from JWT claim — no DB round-trip needed
                 String userId = jwtUtil.extractUserId(token);
+                String role   = jwtUtil.extractRole(token);
+
+                log.debug("JWT valid for URI {}: subject={}, userIdPresent={}, role={}",
+                        request.getRequestURI(), email, userId != null && !userId.isBlank(), role);
 
                 if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                    log.debug("UserDetails loaded for JWT subject {} with authorities {}",
+                            email, userDetails.getAuthorities());
 
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
@@ -61,10 +74,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     authToken.setDetails(details);
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    log.debug("SecurityContext authentication created for URI {} and subject {}",
+                            request.getRequestURI(), email);
                 }
             } catch (Exception e) {
-                log.error("Cannot set user authentication: {}", e.getMessage());
+                log.error("Cannot set user authentication for URI {}: {}",
+                        request.getRequestURI(), e.getMessage());
             }
+        } else if (hasBearerToken) {
+            log.warn("JWT auth rejected for URI {}: token validation failed", request.getRequestURI());
         }
         filterChain.doFilter(request, response);
     }
@@ -82,10 +100,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     // worst case is a brief auth interruption, not a security bypass.
     private boolean isTokenBlacklisted(String token) {
         try {
-            return Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:" + token));
+            boolean blacklisted = Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:" + token));
+            log.debug("Redis JWT blacklist check completed: blacklisted={}", blacklisted);
+            return blacklisted;
         } catch (Exception e) {
             log.error("Redis unavailable for blacklist check — denying token as a safety measure: {}", e.getMessage());
             return true;  // fail-closed: treat token as blacklisted when Redis is unreachable
         }
+    }
+
+    private boolean requiresAuthentication(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri.startsWith("/api/users/")
+                || uri.startsWith("/api/orders/")
+                || uri.startsWith("/api/returns/")
+                || uri.startsWith("/api/cart/")
+                || uri.startsWith("/api/wallet/")
+                || uri.startsWith("/api/vendor/")
+                || uri.startsWith("/api/admin/");
     }
 }
