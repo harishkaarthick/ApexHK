@@ -22,8 +22,6 @@ import java.time.Duration;
 @EnableCaching
 public class RedisConfig {
 
-    // ✅ No stray code here — class body is clean
-
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
@@ -65,7 +63,7 @@ public class RedisConfig {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.activateDefaultTyping(      // ✅ Already correct — PROPERTY based
+        mapper.activateDefaultTyping(
                 ptv,
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY);
