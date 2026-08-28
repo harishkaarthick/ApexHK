@@ -1,5 +1,6 @@
 package com.marketplace.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.marketplace.enums.OrderStatus;
 import lombok.*;
 
@@ -50,6 +51,7 @@ public class VendorOrder {
     private LocalDateTime deliveredAt;
 
     // OTP-based delivery verification — vendor-specific
+    @JsonIgnore
     private String deliveryOtp;
     private Boolean otpVerified;
     private LocalDateTime otpGeneratedAt;

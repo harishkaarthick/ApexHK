@@ -127,6 +127,11 @@ public class SecurityConfig {
                         .hasRole("CUSTOMER")
 
                         .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/orders/*/delivery-otp"
+                        ).hasRole("CUSTOMER")
+
+                        .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/returns"
                         ).hasRole("CUSTOMER")

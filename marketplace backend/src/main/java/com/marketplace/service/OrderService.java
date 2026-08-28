@@ -1,6 +1,7 @@
 package com.marketplace.service;
 
 import com.marketplace.dto.request.OrderRequest;
+import com.marketplace.dto.response.DeliveryOtpResponse;
 import com.marketplace.dto.response.OrderResponse;
 import com.marketplace.dto.response.PagedResponse;
 import com.marketplace.enums.OrderStatus;
@@ -410,6 +411,35 @@ public class OrderService {
                 .orElseThrow(() -> new UnauthorizedException("Access denied"));
     }
 
+    public DeliveryOtpResponse getDeliveryOtp(String orderId, String customerId) {
+        Order order = findById(orderId);
+        if (!order.getCustomerId().equals(customerId)) {
+            throw new UnauthorizedException("Not your order");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        List<DeliveryOtpResponse.Entry> activeOtps = order.getVendorOrders().stream()
+                .filter(vo -> vo.getStatus() == OrderStatus.OUT_FOR_DELIVERY)
+                .filter(vo -> !Boolean.TRUE.equals(vo.getOtpVerified()))
+                .filter(vo -> vo.getDeliveryOtp() != null && vo.getOtpGeneratedAt() != null)
+                .filter(vo -> !vo.getOtpGeneratedAt().plusHours(DELIVERY_OTP_EXPIRY_HOURS).isBefore(now))
+                .map(vo -> DeliveryOtpResponse.Entry.builder()
+                        .vendorId(vo.getVendorId())
+                        .vendorName(vo.getVendorName())
+                        .otp(vo.getDeliveryOtp())
+                        .generatedAt(vo.getOtpGeneratedAt())
+                        .expiresAt(vo.getOtpGeneratedAt().plusHours(DELIVERY_OTP_EXPIRY_HOURS))
+                        .build())
+                .toList();
+
+        log.info("Customer {} requested delivery OTP for order {}: activeOtpCount={}",
+                customerId, orderId, activeOtps.size());
+        return DeliveryOtpResponse.builder()
+                .orderId(order.getId())
+                .otps(activeOtps)
+                .build();
+    }
+
     // FIX 3: enforce allowed vendor status transitions.
     // Mutates ONLY the calling vendor's VendorOrder sub-document, then recomputes
     // the parent (customer-facing) Order.status from every vendor's state.
@@ -750,10 +780,15 @@ public class OrderService {
         vendorPortion.setOtpGeneratedAt(LocalDateTime.now());
 
         userRepository.findById(order.getCustomerId()).ifPresent(u -> {
-            emailService.sendDeliveryOtp(u.getEmail(), u.getName(), order.getId(), otp);
+            try {
+                emailService.sendDeliveryOtp(u.getEmail(), u.getName(), order.getId(), otp);
+            } catch (Exception e) {
+                log.warn("Delivery OTP email notification failed for order {} and vendor {}. OTP remains available in customer order details.",
+                        order.getId(), vendorPortion.getVendorId(), e);
+            }
             notificationService.send(order.getCustomerId(), "Delivery OTP Generated",
                     "Your delivery OTP for " + vendorPortion.getVendorName()
-                            + "'s items has been sent to your registered email.",
+                            + "'s items is available in your order details.",
                     "DELIVERY_OTP_GENERATED", order.getId());
         });
     }
@@ -1029,7 +1064,8 @@ public class OrderService {
                 .placedAt(o.getPlacedAt())
                 .deliveredAt(o.getDeliveredAt())
 
-                .deliveryOtpGenerated(o.getDeliveryOtp() != null)
+                .deliveryOtpGenerated(o.getVendorOrders().stream()
+                        .anyMatch(vo -> vo.getDeliveryOtp() != null))
                 .otpVerified(o.getOtpVerified())
                 .otpGeneratedAt(o.getOtpGeneratedAt())
 

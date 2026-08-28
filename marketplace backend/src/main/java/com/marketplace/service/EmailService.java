@@ -1,13 +1,15 @@
 package com.marketplace.service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
+import com.resend.Resend;
+import com.resend.services.emails.model.CreateEmailResponse;
+import com.resend.services.emails.model.CreateEmailOptions;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -16,8 +18,20 @@ import org.thymeleaf.context.Context;
 @RequiredArgsConstructor
 public class EmailService {
 
-    private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
+
+    @Value("${resend.api-key:}")
+    private String resendApiKey;
+
+    @Value("${mail.from:onboarding@resend.dev}")
+    private String mailFrom;
+
+    @PostConstruct
+    void logMailConfiguration() {
+        String effectiveMailFrom = effectiveMailFrom();
+        log.info("Resend email configuration loaded: resendApiKeyConfigured={}, mailFromConfigured={}, effectiveMailFrom='{}'",
+                StringUtils.hasText(resendApiKey), StringUtils.hasText(mailFrom), effectiveMailFrom);
+    }
 
     @Async
     public void sendOrderConfirmation(String to, String customerName,
@@ -131,20 +145,39 @@ public class EmailService {
     // ── internal ──────────────────────────────────────────────────────────────
 
     private void sendHtml(String to, String subject, String template, Context ctx) {
-        log.info("Preparing email '{}' for {} using template '{}'", subject, to, template);
+        String effectiveMailFrom = effectiveMailFrom();
+        log.info("Preparing email for recipient='{}', subject='{}', template='{}', resendApiKeyConfigured={}, mailFromConfigured={}",
+                to, subject, template, StringUtils.hasText(resendApiKey), StringUtils.hasText(mailFrom));
         try {
+            if (!StringUtils.hasText(resendApiKey)) {
+                log.error("RESEND_API_KEY is not configured");
+                log.error("Email not sent because Resend configuration is incomplete: recipient='{}', subject='{}', template='{}'",
+                        to, subject, template);
+                return;
+            }
+
             String html = templateEngine.process(template, ctx);
-            MimeMessage msg = mailSender.createMimeMessage();
-            MimeMessageHelper h = new MimeMessageHelper(msg, true, "UTF-8");
-            h.setTo(to);
-            h.setSubject(subject);
-            h.setText(html, true);
-            mailSender.send(msg);
-            log.info("Email '{}' sent to {}", subject, to);
-        } catch (MessagingException e) {
-            log.error("Failed to build email '{}' for {} with template '{}'", subject, to, template, e);
+            log.info("Rendered email for recipient='{}', subject='{}', template='{}' (htmlLength={})",
+                    to, subject, template, html.length());
+
+            Resend resend = new Resend(resendApiKey);
+            CreateEmailOptions params = CreateEmailOptions.builder()
+                    .from(effectiveMailFrom)
+                    .to(to)
+                    .subject(subject)
+                    .html(html)
+                    .build();
+            log.info("Attempting Resend email send: recipient='{}', subject='{}', template='{}', from='{}'",
+                    to, subject, template, effectiveMailFrom);
+            CreateEmailResponse response = resend.emails().send(params);
+            log.info("Resend email sent: recipient='{}', subject='{}', template='{}', resendEmailId='{}'",
+                    to, subject, template, response.getId());
         } catch (Exception e) {
             log.error("Failed to send email '{}' to {} with template '{}'", subject, to, template, e);
         }
+    }
+
+    private String effectiveMailFrom() {
+        return StringUtils.hasText(mailFrom) ? mailFrom : "onboarding@resend.dev";
     }
 }

@@ -44,6 +44,11 @@ public class OrderController {
         return ApiResponse.ok(orderService.getOrder(id, SecurityUtil.currentUserId()));
     }
 
+    @GetMapping("/{id}/delivery-otp")
+    public ResponseEntity<?> getDeliveryOtp(@PathVariable String id) {
+        return ApiResponse.ok(orderService.getDeliveryOtp(id, SecurityUtil.currentUserId()));
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable String id,
                                           @Valid @RequestBody OrderRequest.UpdateStatus req) {
@@ -69,7 +74,7 @@ public class OrderController {
     public ResponseEntity<?> generateOtp(@PathVariable String id) {
         var vendor = vendorService.findByUserId(SecurityUtil.currentUserId());
         orderService.generateOtp(id, vendor.getId());
-        return ApiResponse.ok("OTP generated and sent to customer");
+        return ApiResponse.ok("OTP generated and available in customer order details");
     }
 
     @PostMapping("/{id}/verify-otp")

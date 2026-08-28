@@ -1,5 +1,6 @@
 package com.marketplace.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.marketplace.enums.OrderStatus;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -83,6 +84,7 @@ public class Order {
     private LocalDateTime deliveredAt;
 
     // OTP-Based Delivery Verification
+    @JsonIgnore
     private String deliveryOtp;
     private Boolean otpVerified;
     private LocalDateTime otpGeneratedAt;
