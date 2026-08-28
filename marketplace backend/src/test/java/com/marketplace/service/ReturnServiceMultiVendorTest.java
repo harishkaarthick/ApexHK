@@ -168,6 +168,40 @@ class ReturnServiceMultiVendorTest {
     }
 
     @Test
+    void createRejectsZeroReturnQuantity() {
+        Order order = multiVendorOrder(OrderStatus.DELIVERED, OrderStatus.CONFIRMED);
+        ReturnRequestDto.Create request = createRequest("item-a");
+        request.setQuantityToReturn(0);
+
+        when(orderRepository.findById("order-1")).thenReturn(Optional.of(order));
+        when(returnRepository.findByOrderItemIdAndCustomerId("item-a", "customer-1"))
+                .thenReturn(List.of());
+
+        assertThatThrownBy(() -> returnService.create("customer-1", request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Return quantity must be greater than zero");
+
+        verify(returnRepository, never()).save(any());
+    }
+
+    @Test
+    void createRejectsNegativeReturnQuantity() {
+        Order order = multiVendorOrder(OrderStatus.DELIVERED, OrderStatus.CONFIRMED);
+        ReturnRequestDto.Create request = createRequest("item-a");
+        request.setQuantityToReturn(-1);
+
+        when(orderRepository.findById("order-1")).thenReturn(Optional.of(order));
+        when(returnRepository.findByOrderItemIdAndCustomerId("item-a", "customer-1"))
+                .thenReturn(List.of());
+
+        assertThatThrownBy(() -> returnService.create("customer-1", request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Return quantity must be greater than zero");
+
+        verify(returnRepository, never()).save(any());
+    }
+
+    @Test
     void qualityCheckFailureRejectsReturnAndFreesOrderItemWithoutRefund() {
         ReturnRequest existing = ReturnRequest.builder()
                 .id("return-1")

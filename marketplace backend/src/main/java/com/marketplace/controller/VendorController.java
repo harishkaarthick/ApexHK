@@ -4,10 +4,10 @@ import com.marketplace.dto.request.*;
 import com.marketplace.dto.response.ApiResponse;
 import com.marketplace.security.SecurityUtil;
 import com.marketplace.service.*;
+import com.marketplace.util.PaginationUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -66,7 +66,7 @@ public class VendorController {
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.ok(vendorService.getSubscriptionHistory(
-                SecurityUtil.currentUserId(), PageRequest.of(page, size)));
+                SecurityUtil.currentUserId(), PaginationUtils.page(page, size)));
     }
 
     /**
@@ -118,7 +118,7 @@ public class VendorController {
             @RequestParam(required = false)    String endDate) {
         var vendor = vendorService.findByUserId(SecurityUtil.currentUserId());
         return ApiResponse.ok(orderService.getVendorOrders(
-                vendor.getId(), PageRequest.of(page, size),
+                vendor.getId(), PaginationUtils.page(page, size),
                 searchOrderId, searchCustomerName, searchProductName,
                 status, startDate, endDate));
     }
@@ -135,7 +135,7 @@ public class VendorController {
     public ResponseEntity<?> products(@RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "20") int size) {
         var vendor = vendorService.findByUserId(SecurityUtil.currentUserId());
-        return ApiResponse.ok(productService.getVendorProducts(vendor.getId(), PageRequest.of(page, size)));
+        return ApiResponse.ok(productService.getVendorProducts(vendor.getId(), PaginationUtils.page(page, size)));
     }
 
     // ── Returns ───────────────────────────────────────────────────────────────
@@ -144,7 +144,7 @@ public class VendorController {
     public ResponseEntity<?> returns(@RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "10") int size) {
         var vendor = vendorService.findByUserId(SecurityUtil.currentUserId());
-        return ApiResponse.ok(returnService.getVendorReturns(vendor.getId(), PageRequest.of(page, size)));
+        return ApiResponse.ok(returnService.getVendorReturns(vendor.getId(), PaginationUtils.page(page, size)));
     }
 
     @GetMapping("/returns/{id}")
@@ -157,7 +157,7 @@ public class VendorController {
     public ResponseEntity<?> pendingReturns(@RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "10") int size) {
         var vendor = vendorService.findByUserId(SecurityUtil.currentUserId());
-        return ApiResponse.ok(returnService.getVendorPendingReturns(vendor.getId(), PageRequest.of(page, size)));
+        return ApiResponse.ok(returnService.getVendorPendingReturns(vendor.getId(), PaginationUtils.page(page, size)));
     }
 
     @PutMapping("/returns/{id}/review")
@@ -232,6 +232,6 @@ public class VendorController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         var vendor = vendorService.findByUserId(SecurityUtil.currentUserId());
-        return ApiResponse.ok(vendorService.getMyPayoutHistory(vendor.getId(), PageRequest.of(page, size)));
+        return ApiResponse.ok(vendorService.getMyPayoutHistory(vendor.getId(), PaginationUtils.page(page, size)));
     }
 }

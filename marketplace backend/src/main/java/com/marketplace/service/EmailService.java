@@ -153,8 +153,8 @@ public class EmailService {
     // ── internal ──────────────────────────────────────────────────────────────
 
     private void sendHtml(String to, String subject, String template, Context ctx) {
-        log.info("Preparing email for recipient='{}', subject='{}', template='{}', brevoApiKeyConfigured={}, mailFromConfigured={}",
-                to, subject, template, StringUtils.hasText(brevoApiKey), StringUtils.hasText(mailFrom));
+        log.info("Preparing email: template='{}', recipient='{}', brevoApiKeyConfigured={}, mailFromConfigured={}",
+                template, maskEmail(to), StringUtils.hasText(brevoApiKey), StringUtils.hasText(mailFrom));
         try {
             if (!StringUtils.hasText(brevoApiKey)) {
                 log.error("BREVO_API_KEY is not configured");
@@ -166,8 +166,8 @@ public class EmailService {
             }
 
             String html = templateEngine.process(template, ctx);
-            log.info("Rendered email for recipient='{}', subject='{}', template='{}' (htmlLength={})",
-                    to, subject, template, html.length());
+            log.info("Rendered email: template='{}', recipient='{}', htmlLength={}",
+                    template, maskEmail(to), html.length());
 
             Map<String, Object> request = Map.of(
                     "sender", Map.of(
@@ -179,8 +179,8 @@ public class EmailService {
                     "htmlContent", html
             );
 
-            log.info("Sending email via Brevo API: recipient='{}', subject='{}', template='{}', sender='{}'",
-                    to, subject, template, mailFrom);
+            log.info("Sending email via Brevo API: template='{}', recipient='{}', senderConfigured={}",
+                    template, maskEmail(to), StringUtils.hasText(mailFrom));
             ResponseEntity<Map> response = restClient.post()
                     .uri(BREVO_EMAIL_ENDPOINT)
                     .header("api-key", brevoApiKey)
@@ -189,13 +189,29 @@ public class EmailService {
                     .toEntity(Map.class);
 
             Object messageId = response.getBody() != null ? response.getBody().get("messageId") : null;
-            log.info("Brevo email accepted: recipient='{}', subject='{}', template='{}', httpStatus={}, messageId={}",
-                    to, subject, template, response.getStatusCode().value(), messageId);
+            log.info("Brevo email accepted: template='{}', recipient='{}', httpStatus={}, messageIdPresent={}",
+                    template, maskEmail(to), response.getStatusCode().value(), messageId != null);
         } catch (RestClientResponseException e) {
-            log.error("Brevo email failed: recipient='{}', subject='{}', template='{}', HTTP status={}, response={}",
-                    to, subject, template, e.getStatusCode().value(), e.getResponseBodyAsString(), e);
+            log.error("Brevo email failed: template='{}', status={}, category={}",
+                    template, e.getStatusCode().value(), brevoErrorCategory(e));
         } catch (Exception e) {
-            log.error("Failed to send email '{}' to {} with template '{}'", subject, to, template, e);
+            log.error("Email send failed: template='{}', category={}", template,
+                    e.getClass().getSimpleName(), e);
         }
+    }
+
+    private String maskEmail(String email) {
+        if (!StringUtils.hasText(email)) return "";
+        int at = email.indexOf('@');
+        if (at <= 1) return "***";
+        return email.charAt(0) + "***" + email.substring(at);
+    }
+
+    private String brevoErrorCategory(RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        if (status == 401 || status == 403) return "provider_auth_rejected";
+        if (status >= 400 && status < 500) return "provider_request_rejected";
+        if (status >= 500) return "provider_unavailable";
+        return "provider_error";
     }
 }

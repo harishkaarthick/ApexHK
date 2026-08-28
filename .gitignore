@@ -18,6 +18,12 @@ dist/
 *.log
 logs/
 
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
 # IDE
 .idea/
 .vscode/

@@ -6,6 +6,7 @@ import com.marketplace.exception.ResourceNotFoundException;
 import com.marketplace.exception.UnauthorizedException;
 import com.marketplace.model.Notification;
 import com.marketplace.repository.NotificationRepository;
+import com.marketplace.util.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -43,7 +44,7 @@ public class NotificationService {
 
     public PagedResponse<NotificationResponse> getMyNotifications(
             String userId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PaginationUtils.page(page, size);
         Page<Notification> p =
                 notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
         return PagedResponse.of(p.map(this::toResponse));

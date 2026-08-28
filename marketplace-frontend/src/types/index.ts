@@ -170,7 +170,6 @@ export interface VendorOrder {
   deliveredAt?: string;
 
   // OTP-based delivery verification — vendor-specific
-  deliveryOtp?: string;
   otpVerified?: boolean;
   otpGeneratedAt?: string;
 
@@ -229,6 +228,17 @@ export interface CheckoutResponse {
   amount: number;
   currency: string;
   key: string;
+}
+
+export interface DeliveryOtpResponse {
+  orderId: string;
+  otps: Array<{
+    vendorId: string;
+    vendorName: string;
+    otp: string;
+    generatedAt?: string;
+    expiresAt?: string;
+  }>;
 }
 
 // ─────────────────────────────────────────────

@@ -5,10 +5,10 @@ import com.marketplace.dto.request.ReturnRequestDto;
 import com.marketplace.dto.response.ApiResponse;
 import com.marketplace.security.SecurityUtil;
 import com.marketplace.service.ReturnService;
+import com.marketplace.util.PaginationUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -51,7 +51,7 @@ public class ReturnController {
     @GetMapping("/my-returns")
     public ResponseEntity<?> myReturns(@RequestParam(defaultValue = "0") int page,
                                        @RequestParam(defaultValue = "10") int size) {
-        return ApiResponse.ok(returnService.getMyReturns(SecurityUtil.currentUserId(), PageRequest.of(page, size)));
+        return ApiResponse.ok(returnService.getMyReturns(SecurityUtil.currentUserId(), PaginationUtils.page(page, size)));
     }
 
     @GetMapping("/{id}")

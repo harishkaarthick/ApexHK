@@ -7,6 +7,7 @@ import com.marketplace.enums.ReturnStatus;
 import com.marketplace.enums.VendorStatus;
 import com.marketplace.security.SecurityUtil;
 import com.marketplace.service.AdminService;
+import com.marketplace.util.PaginationUtils;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -33,7 +34,7 @@ public class AdminController {
     @GetMapping("/users")
     public ResponseEntity<?> users(@RequestParam(defaultValue = "0") int page,
                                    @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(adminService.getAllUsers(PageRequest.of(page, size)));
+        return ApiResponse.ok(adminService.getAllUsers(PaginationUtils.page(page, size)));
     }
 
     @PutMapping("/users/{id}/toggle")
@@ -52,21 +53,21 @@ public class AdminController {
                                     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
                                     @RequestParam(required = false) String customerId) {
         return ApiResponse.ok(adminService.getAllOrders(
-                PageRequest.of(page, size, Sort.by("placedAt").descending()),
+                PaginationUtils.page(page, size, Sort.by("placedAt").descending()),
                 status, from, to, customerId));
     }
 
     @GetMapping("/vendors/pending")
     public ResponseEntity<?> pendingVendors(@RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(adminService.getPendingVendors(PageRequest.of(page, size)));
+        return ApiResponse.ok(adminService.getPendingVendors(PaginationUtils.page(page, size)));
     }
 
     @GetMapping("/vendors")
     public ResponseEntity<?> allVendors(@RequestParam(defaultValue = "0") int page,
                                         @RequestParam(defaultValue = "20") int size,
                                         @RequestParam(required = false) VendorStatus status) {
-        return ApiResponse.ok(adminService.getAllVendors(PageRequest.of(page, size), status));
+        return ApiResponse.ok(adminService.getAllVendors(PaginationUtils.page(page, size), status));
     }
 
     @PutMapping("/vendors/{id}/approve")
@@ -92,14 +93,14 @@ public class AdminController {
     public ResponseEntity<?> payouts(@RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.ok(adminService.getAllPayouts(
-                PageRequest.of(page, size, Sort.by("requestedAt").descending())));
+                PaginationUtils.page(page, size, Sort.by("requestedAt").descending())));
     }
 
     @GetMapping("/payouts/pending")
     public ResponseEntity<?> pendingPayouts(@RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.ok(adminService.getPendingPayouts(
-                PageRequest.of(page, size, Sort.by("requestedAt").descending())));
+                PaginationUtils.page(page, size, Sort.by("requestedAt").descending())));
     }
 
     @PostMapping("/payouts/{id}/approve")
@@ -121,7 +122,7 @@ public class AdminController {
     @GetMapping("/coupons")
     public ResponseEntity<?> coupons(@RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(adminService.getCoupons(PageRequest.of(page, size)));
+        return ApiResponse.ok(adminService.getCoupons(PaginationUtils.page(page, size)));
     }
 
     @PutMapping("/coupons/{id}/toggle")
@@ -145,7 +146,7 @@ public class AdminController {
     @GetMapping("/banners")
     public ResponseEntity<?> banners(@RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(adminService.getBanners(PageRequest.of(page, size)));
+        return ApiResponse.ok(adminService.getBanners(PaginationUtils.page(page, size)));
     }
 
     @PutMapping("/banners/{id}/toggle")
@@ -164,7 +165,7 @@ public class AdminController {
     public ResponseEntity<?> returns(@RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "20") int size,
                                       @RequestParam(required = false) ReturnStatus status) {
-        return ApiResponse.ok(adminService.getAllReturns(PageRequest.of(page, size), status));
+        return ApiResponse.ok(adminService.getAllReturns(PaginationUtils.page(page, size), status));
     }
 
     @GetMapping("/returns/analytics")
@@ -189,7 +190,7 @@ public class AdminController {
     public ResponseEntity<?> products(@RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "20") int size,
                                       @RequestParam(required = false) String vendorId) {
-        return ApiResponse.ok(adminService.getAllProducts(PageRequest.of(page, size), vendorId));
+        return ApiResponse.ok(adminService.getAllProducts(PaginationUtils.page(page, size), vendorId));
     }
 
     @DeleteMapping("/products/{id}")
@@ -215,7 +216,7 @@ public class AdminController {
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false)    String plan) {
-        return ApiResponse.ok(adminService.getAllSubscriptions(plan, PageRequest.of(page, size)));
+        return ApiResponse.ok(adminService.getAllSubscriptions(plan, PaginationUtils.page(page, size)));
     }
 
     /**

@@ -110,7 +110,10 @@ public class ReturnService {
                     "A return request already exists for this item in order " + req.getOrderId());
 
         // Calculate refund amount based on quantity
-        int qtyToReturn = (req.getQuantityToReturn() == null || req.getQuantityToReturn() <= 0)
+        if (req.getQuantityToReturn() != null && req.getQuantityToReturn() <= 0) {
+            throw new IllegalStateException("Return quantity must be greater than zero");
+        }
+        int qtyToReturn = req.getQuantityToReturn() == null
                 ? orderItem.getQuantity()
                 : req.getQuantityToReturn();
         if (qtyToReturn > orderItem.getQuantity())

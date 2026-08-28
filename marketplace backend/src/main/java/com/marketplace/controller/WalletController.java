@@ -5,10 +5,10 @@ import com.marketplace.dto.response.ApiResponse;
 import com.marketplace.dto.response.WalletResponse;
 import com.marketplace.security.SecurityUtil;
 import com.marketplace.service.WalletService;
+import com.marketplace.util.PaginationUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,7 +29,7 @@ public class WalletController {
         String userId = SecurityUtil.currentUserId();
         return ApiResponse.ok(new WalletResponse.Balance(
                 walletService.getBalance(userId),
-                walletService.getTransactions(userId, PageRequest.of(page, size))));
+                walletService.getTransactions(userId, PaginationUtils.page(page, size))));
     }
 
     /**

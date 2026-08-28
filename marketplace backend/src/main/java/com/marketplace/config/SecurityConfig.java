@@ -18,6 +18,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.util.StringUtils;
@@ -39,6 +40,9 @@ public class SecurityConfig {
 
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
     private String allowedOriginsRaw;
+
+    @Value("${app.cors.require-explicit-config:false}")
+    private boolean requireExplicitCorsConfig;
 
     private static final String[] PUBLIC_POST = {
             "/api/auth/register",
@@ -74,6 +78,24 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'self'; " +
+                                        "script-src 'self' https://checkout.razorpay.com; " +
+                                        "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com; " +
+                                        "connect-src 'self' https://api.razorpay.com wss: ws:; " +
+                                        "img-src 'self' data: https://res.cloudinary.com; " +
+                                        "style-src 'self' 'unsafe-inline'; " +
+                                        "object-src 'none'; " +
+                                        "base-uri 'self'; " +
+                                        "frame-ancestors 'self'"))
+                        .frameOptions(frame -> frame.sameOrigin())
+                        .referrerPolicy(referrer -> referrer.policy(
+                                ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000)))
 
                 .sessionManagement(s ->
                         s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -243,16 +265,28 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
+        if (requireExplicitCorsConfig && !StringUtils.hasText(allowedOriginsRaw)) {
+            throw new IllegalStateException("APP_CORS_ALLOWED_ORIGINS must be configured when production CORS fail-closed mode is enabled");
+        }
+
         List<String> origins =
                 StringUtils.hasText(allowedOriginsRaw)
                         ? Arrays.asList(allowedOriginsRaw.split(","))
-                        : List.of("http://localhost:3000");
+                        : List.of("http://localhost:3000", "http://localhost:5173");
 
-        config.setAllowedOrigins(
-                origins.stream()
-                        .map(String::trim)
-                        .toList()
-        );
+        List<String> normalizedOrigins = origins.stream()
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .toList();
+
+        if (normalizedOrigins.isEmpty()) {
+            throw new IllegalStateException("At least one CORS origin must be configured");
+        }
+        if (normalizedOrigins.contains("*")) {
+            throw new IllegalStateException("Wildcard CORS origins are not allowed when credentials are enabled");
+        }
+
+        config.setAllowedOrigins(normalizedOrigins);
 
         config.setAllowedMethods(
                 List.of(

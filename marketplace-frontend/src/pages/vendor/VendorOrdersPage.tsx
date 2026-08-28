@@ -241,7 +241,7 @@ function OrderDetailsDrawer({
   const currentCourierName = vo?.courierName ?? order.courierName;
   const deliveredAt = vo?.deliveredAt ?? order.deliveredAt;
   const otpVerified = vo?.otpVerified ?? order.otpVerified;
-  const deliveryOtpGenerated = (vo ? vo.deliveryOtp != null : order.deliveryOtpGenerated) ?? false;
+  const deliveryOtpGenerated = order.deliveryOtpGenerated ?? false;
   const vendorEarnings = vo?.vendorEarnings ?? order.vendorEarnings;
   const subtotal = vo?.subtotal ?? order.subtotal;
 
@@ -1257,7 +1257,7 @@ export function VendorOrdersPage() {
 
   const generateOtpMutation = useMutation({
     mutationFn: (id: string) => api.post(`/orders/${id}/generate-otp`),
-    onSuccess: () => { toast.success('OTP generated and sent to customer'); qc.invalidateQueries({ queryKey: ['vendor-orders'] }); },
+    onSuccess: () => { toast.success('OTP generated and available in customer order details'); qc.invalidateQueries({ queryKey: ['vendor-orders'] }); },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Failed'),
   });
 

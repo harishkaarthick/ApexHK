@@ -9,6 +9,7 @@ import com.marketplace.model.*;
 import com.marketplace.repository.ProductRepository;
 import com.marketplace.repository.VendorRepository;
 import com.marketplace.util.CloudinaryUploader;
+import com.mongodb.client.result.UpdateResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.*;
@@ -197,14 +198,19 @@ public class ProductService {
 
     @CacheEvict(value = {"products", "product"}, allEntries = true)
     public void delete(String productId, String vendorId) {
-        Product product = findByIdAndVendor(productId, vendorId);
-        product.setActive(false);
-        productRepository.save(product);
-        // FIX §3.3: decrement the atomic counter to mirror the create() increment.
-        mongoTemplate.updateFirst(
-                Query.query(Criteria.where("_id").is(vendorId)),
-                new Update().inc("activeProductCount", -1),
-                Vendor.class);
+        findByIdAndVendor(productId, vendorId);
+        UpdateResult result = mongoTemplate.updateFirst(
+                Query.query(Criteria.where("_id").is(productId)
+                        .and("vendorId").is(vendorId)
+                        .and("isActive").is(true)),
+                new Update().set("isActive", false),
+                Product.class);
+        if (result.getModifiedCount() > 0) {
+            mongoTemplate.updateFirst(
+                    Query.query(Criteria.where("_id").is(vendorId)),
+                    new Update().inc("activeProductCount", -1),
+                    Vendor.class);
+        }
     }
 
     @CacheEvict(value = {"products", "product"}, allEntries = true)
@@ -259,7 +265,7 @@ public class ProductService {
                 if (url != null) urls.add(url);
             });
         }
-        log.info("Cloudinary returned image URLs: {}", urls);
+        log.info("Cloudinary upload completed for folder '{}': uploadedCount={}", folder, urls.size());
         return urls;
     }
 

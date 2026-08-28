@@ -6,10 +6,10 @@ import com.marketplace.security.SecurityUtil;
 import com.marketplace.service.OrderService;
 import com.marketplace.service.UserService;
 import com.marketplace.service.VendorService;
+import com.marketplace.util.PaginationUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,7 +36,7 @@ public class OrderController {
     @GetMapping("/my-orders")
     public ResponseEntity<?> myOrders(@RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "10") int size) {
-        return ApiResponse.ok(orderService.getMyOrders(SecurityUtil.currentUserId(), PageRequest.of(page, size)));
+        return ApiResponse.ok(orderService.getMyOrders(SecurityUtil.currentUserId(), PaginationUtils.page(page, size)));
     }
 
     @GetMapping("/{id}")

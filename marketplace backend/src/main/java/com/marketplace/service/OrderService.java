@@ -33,6 +33,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -47,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 @Slf4j
@@ -66,8 +68,11 @@ public class OrderService {
     private final RazorpayClient      razorpayClient;
     private final MongoTemplate       mongoTemplate;
     private final RazorpayUtil        razorpayUtil;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Value("${razorpay.key-id}") private String razorpayKeyId;
+    @Value("${app.delivery-otp.max-failed-attempts:5}") private int otpMaxFailedAttempts;
+    @Value("${app.delivery-otp.lockout-minutes:15}") private long otpLockoutMinutes;
 
     private static final SecureRandom OTP_RANDOM = new SecureRandom();
     private static final int DELIVERY_OTP_EXPIRY_HOURS = 24;
@@ -536,7 +541,12 @@ public class OrderService {
                     .orElse(null);
         }
         if (mine == null)
+        {
+            registerOtpFailure(orderId, "unknown");
             throw new IllegalStateException("Invalid OTP");
+        }
+
+        enforceOtpNotLocked(orderId, mine.getVendorId());
 
         if (mine.getStatus() != OrderStatus.OUT_FOR_DELIVERY) {
             throw new IllegalStateException("OTP verification can only be done when order is OUT_FOR_DELIVERY");
@@ -548,9 +558,11 @@ public class OrderService {
             throw new IllegalStateException("OTP has expired. Please request a new one.");
         }
         if (!otp.equals(mine.getDeliveryOtp())) {
+            registerOtpFailure(orderId, mine.getVendorId());
             throw new IllegalStateException("Invalid OTP");
         }
 
+        clearOtpFailures(orderId, mine.getVendorId());
         mine.setOtpVerified(true);
         mine.setDeliveryOtp(null);
         mine.setDeliveredAt(LocalDateTime.now());
@@ -566,6 +578,35 @@ public class OrderService {
                 emailService.sendOrderDelivered(u.getEmail(), u.getName(), deliveredOrder.getId()));
 
         return isCustomer ? toResponse(deliveredOrder) : toVendorResponse(deliveredOrder, mine.getVendorId());
+    }
+
+    private void enforceOtpNotLocked(String orderId, String vendorId) {
+        Boolean locked = redisTemplate.hasKey(otpLockKey(orderId, vendorId));
+        if (Boolean.TRUE.equals(locked)) {
+            throw new IllegalStateException("Too many invalid OTP attempts. Please try again later.");
+        }
+    }
+
+    private void registerOtpFailure(String orderId, String vendorId) {
+        String attemptsKey = otpAttemptsKey(orderId, vendorId);
+        Long attempts = redisTemplate.opsForValue().increment(attemptsKey);
+        redisTemplate.expire(attemptsKey, otpLockoutMinutes, TimeUnit.MINUTES);
+        if (attempts != null && attempts >= otpMaxFailedAttempts) {
+            redisTemplate.opsForValue().set(otpLockKey(orderId, vendorId), "locked", otpLockoutMinutes, TimeUnit.MINUTES);
+        }
+    }
+
+    private void clearOtpFailures(String orderId, String vendorId) {
+        redisTemplate.delete(otpAttemptsKey(orderId, vendorId));
+        redisTemplate.delete(otpLockKey(orderId, vendorId));
+    }
+
+    private String otpAttemptsKey(String orderId, String vendorId) {
+        return "delivery-otp:attempts:" + orderId + ":" + vendorId;
+    }
+
+    private String otpLockKey(String orderId, String vendorId) {
+        return "delivery-otp:lock:" + orderId + ":" + vendorId;
     }
 
     public OrderResponse updateShippingDetails(String orderId, String vendorId,

@@ -6,9 +6,9 @@ import com.marketplace.dto.response.ApiResponse;
 import com.marketplace.security.SecurityUtil;
 import com.marketplace.service.ReviewService;
 import com.marketplace.service.UserService;
+import com.marketplace.util.PaginationUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +33,7 @@ public class ReviewController {
                                           @RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.ok(reviewService.getByProduct(productId,
-                PageRequest.of(page, size, Sort.by("createdAt").descending())));
+                PaginationUtils.page(page, size, Sort.by("createdAt").descending())));
     }
 
     @GetMapping("/mine/reviewed")

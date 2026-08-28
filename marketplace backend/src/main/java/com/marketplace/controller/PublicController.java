@@ -3,9 +3,9 @@ package com.marketplace.controller;
 import com.marketplace.dto.response.ApiResponse;
 import com.marketplace.enums.BannerPlacement;
 import com.marketplace.service.PublicService;
+import com.marketplace.util.PaginationUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +33,6 @@ public class PublicController {
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.ok(
-                publicService.getActiveCoupons(PageRequest.of(page, size)));
+                publicService.getActiveCoupons(PaginationUtils.page(page, size)));
     }
 }

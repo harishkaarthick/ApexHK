@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle2, ChevronDown, Clock3, CreditCard, ImagePlus, MapPin, Package, Receipt, Star, Truck, X, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Clock3, CreditCard, ImagePlus, KeyRound, MapPin, Package, Receipt, Star, Truck, X, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
 import api from '@/lib/axios';
-import type { Order, OrderItem, OrderStatus, PagedResponse, ReturnRequest, ReturnStatus, VendorOrder } from '@/types';
+import type { DeliveryOtpResponse, Order, OrderItem, OrderStatus, PagedResponse, ReturnRequest, ReturnStatus, VendorOrder } from '@/types';
 import { Empty, LoadingBlock, Page, money, unwrap } from '@/pages/pageShared';
 import { fadeInUp, staggerContainer } from '@/lib/motion';
 
@@ -271,12 +271,21 @@ export function OrderDetailPage() {
     return map;
   }, [myReturns, id]);
 
+  const vendorGroups = useMemo(() => (order ? buildVendorGroups(order) : []), [order]);
+  const hasActiveDelivery = vendorGroups.some((group) => group.status === 'OUT_FOR_DELIVERY' && !group.vendorOrder?.otpVerified);
+  const { data: deliveryOtp } = useQuery({
+    queryKey: ['delivery-otp', id],
+    queryFn: () => api.get(`/orders/${id}/delivery-otp`).then((r) => unwrap<DeliveryOtpResponse>(r)),
+    enabled: Boolean(id) && hasActiveDelivery,
+    refetchOnWindowFocus: true,
+  });
+  const activeOtps = deliveryOtp?.otps ?? [];
+
   if (isLoading) return <Page title="Order detail"><LoadingBlock /></Page>;
   if (!order) return <Page title="Order detail"><Empty title="Order not found" /></Page>;
 
   const address = order.shippingAddress;
   const itemTotal = order.items.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity || item.unitPrice || 0), 0);
-  const vendorGroups = buildVendorGroups(order);
 
   return (
     <Page title="Order tracking">
@@ -367,6 +376,10 @@ export function OrderDetailPage() {
           </motion.div>
 
           <motion.aside className="space-y-4" variants={fadeInUp}>
+            {hasActiveDelivery && activeOtps.length > 0 && (
+              <DeliveryOtpCard otps={activeOtps} />
+            )}
+
             <InfoCard icon={MapPin} title="Delivery Address">
               <p className="font-semibold">{address?.fullName}</p>
               <p>{address?.phone}</p>
@@ -393,6 +406,35 @@ export function OrderDetailPage() {
         </div>
       </motion.div>
     </Page>
+  );
+}
+
+function DeliveryOtpCard({ otps }: { otps: DeliveryOtpResponse['otps'] }) {
+  return (
+    <div className="card border-orange-200 bg-orange-50/80 p-5 dark:border-orange-500/30 dark:bg-orange-500/10">
+      <div className="mb-4 flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300">
+          <KeyRound className="h-5 w-5" />
+        </span>
+        <h2 className="font-semibold text-orange-950 dark:text-orange-100">Delivery OTP</h2>
+      </div>
+      <div className="space-y-4">
+        {otps.map((entry) => (
+          <div key={entry.vendorId} className="rounded-lg border border-orange-200 bg-white p-4 dark:border-orange-500/20 dark:bg-slate-950/40">
+            {otps.length > 1 && (
+              <p className="mb-2 text-xs font-semibold uppercase text-orange-700 dark:text-orange-300">{entry.vendorName}</p>
+            )}
+            <p className="font-mono text-3xl font-black tracking-[0.35em] text-orange-950 dark:text-orange-100">{entry.otp}</p>
+            {entry.expiresAt && (
+              <p className="mt-2 text-xs text-orange-700 dark:text-orange-300">Expires {safeFormat(entry.expiresAt)}</p>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-sm text-orange-800 dark:text-orange-200">
+        Share this OTP with the delivery/vendor person to confirm delivery.
+      </p>
+    </div>
   );
 }
 

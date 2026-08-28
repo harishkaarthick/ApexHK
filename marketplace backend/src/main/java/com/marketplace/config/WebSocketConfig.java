@@ -9,13 +9,16 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.util.StringUtils;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -63,24 +66,34 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
                 if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
                     String authHeader = accessor.getFirstNativeHeader("Authorization");
-                    if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
-                        String token = authHeader.substring(7);
-                        if (jwtUtil.validateToken(token) && !isTokenBlacklisted(token)) {
-                            // ISSUE-03 FIX: Only allow connection if token is NOT blacklisted.
-                            // Previously a logged-out token could still open a WebSocket connection
-                            // for up to 15 minutes (JWT expiry) because the blacklist was not checked.
-                            String email  = jwtUtil.extractEmail(token);
-                            String role   = jwtUtil.extractRole(token);
-                            String userId = jwtUtil.extractUserId(token);
-                            UsernamePasswordAuthenticationToken auth =
-                                    new UsernamePasswordAuthenticationToken(
-                                            userId, null,
-                                            List.of(new SimpleGrantedAuthority("ROLE_" + role)));
-                            accessor.setUser(auth);
-                            if (accessor.getSessionAttributes() != null) {
-                                accessor.getSessionAttributes().put("userId", userId);
-                            }
-                        }
+                    if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
+                        throw new AuthenticationCredentialsNotFoundException("Missing WebSocket bearer token");
+                    }
+                    String token = authHeader.substring(7);
+                    if (!jwtUtil.validateToken(token) || isTokenBlacklisted(token)) {
+                        throw new AuthenticationCredentialsNotFoundException("Invalid WebSocket bearer token");
+                    }
+
+                    // ISSUE-03 FIX: Only allow connection if token is NOT blacklisted.
+                    // Previously a logged-out token could still open a WebSocket connection
+                    // for up to 15 minutes (JWT expiry) because the blacklist was not checked.
+                    String role   = jwtUtil.extractRole(token);
+                    String userId = jwtUtil.extractUserId(token);
+                    UsernamePasswordAuthenticationToken auth =
+                            new UsernamePasswordAuthenticationToken(
+                                    userId, null,
+                                    List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+                    accessor.setUser(auth);
+                    if (accessor.getSessionAttributes() != null) {
+                        accessor.getSessionAttributes().put("userId", userId);
+                    }
+                }
+
+                if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+                    String destination = accessor.getDestination();
+                    if (destination != null && destination.startsWith("/user/")
+                            && SimpMessageHeaderAccessor.getUser(message.getHeaders()) == null) {
+                        throw new AuthorizationDeniedException("WebSocket subscription denied");
                     }
                 }
                 return message;

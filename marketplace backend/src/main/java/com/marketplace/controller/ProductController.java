@@ -6,11 +6,11 @@ import com.marketplace.dto.response.ApiResponse;
 import com.marketplace.security.SecurityUtil;
 import com.marketplace.service.ProductService;
 import com.marketplace.service.VendorService;
+import com.marketplace.util.PaginationUtils;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -41,7 +41,7 @@ public class ProductController {
                                   @RequestParam(defaultValue = "createdAt") String sort) {
         if (!ALLOWED_SORT.contains(sort)) sort = "createdAt";
         return ApiResponse.ok(productService.getAllActive(
-                PageRequest.of(page, size, Sort.by(sort).descending())));
+                PaginationUtils.page(page, size, Sort.by(sort).descending())));
     }
 
     @GetMapping("/{id}")
@@ -53,7 +53,7 @@ public class ProductController {
     public ResponseEntity<?> byCategory(@PathVariable String category,
                                         @RequestParam(defaultValue = "0")  int page,
                                         @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(productService.getByCategory(category, PageRequest.of(page, size)));
+        return ApiResponse.ok(productService.getByCategory(category, PaginationUtils.page(page, size)));
     }
 
     @GetMapping("/search")
@@ -69,7 +69,7 @@ public class ProductController {
                                     @RequestParam(required = false) Boolean inStock,
                                     @RequestParam(defaultValue = "relevance") String sort) {
         String query = q != null ? q : (keyword == null ? "" : keyword);
-        return ApiResponse.ok(productService.search(query, PageRequest.of(page, size),
+        return ApiResponse.ok(productService.search(query, PaginationUtils.page(page, size),
                 category, brand, minPrice, maxPrice, minRating, inStock, sort));
     }
 

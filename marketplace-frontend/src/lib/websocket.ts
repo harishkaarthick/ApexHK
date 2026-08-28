@@ -70,6 +70,7 @@ export function connectWebSocket(accessToken: string) {
             // Customer-side order detail too
             if (notification.referenceId) {
               queryClient.invalidateQueries({ queryKey: ['order', notification.referenceId] });
+              queryClient.invalidateQueries({ queryKey: ['delivery-otp', notification.referenceId] });
             }
           }
           // ────────────────────────────────────────────────────────────────

@@ -20,10 +20,13 @@ import com.marketplace.util.RazorpayUtil;
 import com.razorpay.RazorpayClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,7 +36,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,8 +58,16 @@ class OrderServiceDeliveryOtpTest {
     @Mock private RazorpayClient razorpayClient;
     @Mock private MongoTemplate mongoTemplate;
     @Mock private RazorpayUtil razorpayUtil;
+    @Mock private RedisTemplate<String, Object> redisTemplate;
+    @Mock private ValueOperations<String, Object> valueOperations;
 
     @InjectMocks private OrderService orderService;
+
+    @BeforeEach
+    void setUpRedis() {
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisTemplate.hasKey(any())).thenReturn(false);
+    }
 
     @Test
     void customerCanRetrieveOwnActiveDeliveryOtp() {
@@ -112,6 +126,64 @@ class OrderServiceDeliveryOtpTest {
         assertThat(order.getVendorOrders().get(0).getDeliveryOtp()).isNull();
         assertThat(order.getVendorOrders().get(0).getOtpVerified()).isTrue();
         verify(orderRepository).save(order);
+        verify(redisTemplate).delete("delivery-otp:attempts:order-1:vendor-1");
+        verify(redisTemplate).delete("delivery-otp:lock:order-1:vendor-1");
+    }
+
+    @Test
+    void invalidOtpIncrementsFailedAttemptCounter() {
+        Order order = outForDeliveryOrder("482913");
+        when(orderRepository.findById("order-1")).thenReturn(Optional.of(order));
+        when(vendorRepository.findByUserId("vendor-user-1"))
+                .thenReturn(Optional.of(Vendor.builder().id("vendor-1").build()));
+        when(valueOperations.increment("delivery-otp:attempts:order-1:vendor-1")).thenReturn(1L);
+
+        assertThatThrownBy(() -> orderService.verifyOtp("order-1", "vendor-user-1", "000000", "vendor-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Invalid OTP");
+
+        verify(redisTemplate).expire(eq("delivery-otp:attempts:order-1:vendor-1"), anyLong(), any());
+    }
+
+    @Test
+    void tooManyInvalidOtpAttemptsCreatesTemporaryLockout() {
+        Order order = outForDeliveryOrder("482913");
+        when(orderRepository.findById("order-1")).thenReturn(Optional.of(order));
+        when(vendorRepository.findByUserId("vendor-user-1"))
+                .thenReturn(Optional.of(Vendor.builder().id("vendor-1").build()));
+        when(valueOperations.increment("delivery-otp:attempts:order-1:vendor-1")).thenReturn(5L);
+
+        assertThatThrownBy(() -> orderService.verifyOtp("order-1", "vendor-user-1", "000000", "vendor-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Invalid OTP");
+
+        verify(valueOperations).set(eq("delivery-otp:lock:order-1:vendor-1"), eq("locked"), anyLong(), any());
+    }
+
+    @Test
+    void lockedOtpRejectsEvenCorrectValue() {
+        Order order = outForDeliveryOrder("482913");
+        when(orderRepository.findById("order-1")).thenReturn(Optional.of(order));
+        when(vendorRepository.findByUserId("vendor-user-1"))
+                .thenReturn(Optional.of(Vendor.builder().id("vendor-1").build()));
+        when(redisTemplate.hasKey("delivery-otp:lock:order-1:vendor-1")).thenReturn(true);
+
+        assertThatThrownBy(() -> orderService.verifyOtp("order-1", "vendor-user-1", "482913", "vendor-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Too many invalid OTP attempts");
+    }
+
+    @Test
+    void expiredOtpIsRejected() {
+        Order order = outForDeliveryOrder("482913");
+        order.getVendorOrders().get(0).setOtpGeneratedAt(LocalDateTime.now().minusHours(25));
+        when(orderRepository.findById("order-1")).thenReturn(Optional.of(order));
+        when(vendorRepository.findByUserId("vendor-user-1"))
+                .thenReturn(Optional.of(Vendor.builder().id("vendor-1").build()));
+
+        assertThatThrownBy(() -> orderService.verifyOtp("order-1", "vendor-user-1", "482913", "vendor-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("OTP has expired");
     }
 
     @Test
