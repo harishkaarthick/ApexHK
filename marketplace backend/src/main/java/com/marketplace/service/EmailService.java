@@ -1,34 +1,44 @@
 package com.marketplace.service;
 
 import jakarta.annotation.PostConstruct;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private static final String BREVO_EMAIL_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
+
     private final TemplateEngine templateEngine;
+    private final RestClient restClient = RestClient.create();
+
+    @Value("${brevo.api-key:}")
+    private String brevoApiKey;
 
     @Value("${mail.from:}")
     private String mailFrom;
 
+    @Value("${mail.from-name:ApexHK}")
+    private String mailFromName;
+
     @PostConstruct
     void logMailConfiguration() {
-        log.info("Gmail SMTP email configuration loaded: mailFromConfigured={}",
-                StringUtils.hasText(mailFrom));
+        log.info("Brevo email configuration loaded: brevoApiKeyConfigured={}, mailFromConfigured={}",
+                StringUtils.hasText(brevoApiKey), StringUtils.hasText(mailFrom));
     }
 
     @Async
@@ -143,27 +153,47 @@ public class EmailService {
     // ── internal ──────────────────────────────────────────────────────────────
 
     private void sendHtml(String to, String subject, String template, Context ctx) {
-        log.info("Preparing email for recipient='{}', subject='{}', template='{}', mailFromConfigured={}",
-                to, subject, template, StringUtils.hasText(mailFrom));
+        log.info("Preparing email for recipient='{}', subject='{}', template='{}', brevoApiKeyConfigured={}, mailFromConfigured={}",
+                to, subject, template, StringUtils.hasText(brevoApiKey), StringUtils.hasText(mailFrom));
         try {
+            if (!StringUtils.hasText(brevoApiKey)) {
+                log.error("BREVO_API_KEY is not configured");
+                return;
+            }
+            if (!StringUtils.hasText(mailFrom)) {
+                log.error("MAIL_FROM is not configured");
+                return;
+            }
+
             String html = templateEngine.process(template, ctx);
             log.info("Rendered email for recipient='{}', subject='{}', template='{}' (htmlLength={})",
                     to, subject, template, html.length());
 
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(mailFrom);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(html, true);
+            Map<String, Object> request = Map.of(
+                    "sender", Map.of(
+                            "name", StringUtils.hasText(mailFromName) ? mailFromName : "ApexHK",
+                            "email", mailFrom
+                    ),
+                    "to", List.of(Map.of("email", to)),
+                    "subject", subject,
+                    "htmlContent", html
+            );
 
-            log.info("Sending email via Gmail SMTP: recipient='{}', subject='{}', template='{}'",
-                    to, subject, template);
-            mailSender.send(message);
-            log.info("Email sent via Gmail SMTP: recipient='{}', subject='{}', template='{}'",
-                    to, subject, template);
-        } catch (MessagingException e) {
-            log.error("Failed to build email '{}' to {} with template '{}'", subject, to, template, e);
+            log.info("Sending email via Brevo API: recipient='{}', subject='{}', template='{}', sender='{}'",
+                    to, subject, template, mailFrom);
+            ResponseEntity<Map> response = restClient.post()
+                    .uri(BREVO_EMAIL_ENDPOINT)
+                    .header("api-key", brevoApiKey)
+                    .body(request)
+                    .retrieve()
+                    .toEntity(Map.class);
+
+            Object messageId = response.getBody() != null ? response.getBody().get("messageId") : null;
+            log.info("Brevo email accepted: recipient='{}', subject='{}', template='{}', httpStatus={}, messageId={}",
+                    to, subject, template, response.getStatusCode().value(), messageId);
+        } catch (RestClientResponseException e) {
+            log.error("Brevo email failed: recipient='{}', subject='{}', template='{}', HTTP status={}, response={}",
+                    to, subject, template, e.getStatusCode().value(), e.getResponseBodyAsString(), e);
         } catch (Exception e) {
             log.error("Failed to send email '{}' to {} with template '{}'", subject, to, template, e);
         }
