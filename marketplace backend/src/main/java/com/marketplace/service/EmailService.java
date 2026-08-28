@@ -1,12 +1,13 @@
 package com.marketplace.service;
 
-import com.resend.Resend;
-import com.resend.services.emails.model.CreateEmailResponse;
-import com.resend.services.emails.model.CreateEmailOptions;
 import jakarta.annotation.PostConstruct;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -18,19 +19,16 @@ import org.thymeleaf.context.Context;
 @RequiredArgsConstructor
 public class EmailService {
 
+    private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
 
-    @Value("${resend.api-key:}")
-    private String resendApiKey;
-
-    @Value("${mail.from:onboarding@resend.dev}")
+    @Value("${mail.from:}")
     private String mailFrom;
 
     @PostConstruct
     void logMailConfiguration() {
-        String effectiveMailFrom = effectiveMailFrom();
-        log.info("Resend email configuration loaded: resendApiKeyConfigured={}, mailFromConfigured={}, effectiveMailFrom='{}'",
-                StringUtils.hasText(resendApiKey), StringUtils.hasText(mailFrom), effectiveMailFrom);
+        log.info("Gmail SMTP email configuration loaded: mailFromConfigured={}",
+                StringUtils.hasText(mailFrom));
     }
 
     @Async
@@ -145,39 +143,29 @@ public class EmailService {
     // ── internal ──────────────────────────────────────────────────────────────
 
     private void sendHtml(String to, String subject, String template, Context ctx) {
-        String effectiveMailFrom = effectiveMailFrom();
-        log.info("Preparing email for recipient='{}', subject='{}', template='{}', resendApiKeyConfigured={}, mailFromConfigured={}",
-                to, subject, template, StringUtils.hasText(resendApiKey), StringUtils.hasText(mailFrom));
+        log.info("Preparing email for recipient='{}', subject='{}', template='{}', mailFromConfigured={}",
+                to, subject, template, StringUtils.hasText(mailFrom));
         try {
-            if (!StringUtils.hasText(resendApiKey)) {
-                log.error("RESEND_API_KEY is not configured");
-                log.error("Email not sent because Resend configuration is incomplete: recipient='{}', subject='{}', template='{}'",
-                        to, subject, template);
-                return;
-            }
-
             String html = templateEngine.process(template, ctx);
             log.info("Rendered email for recipient='{}', subject='{}', template='{}' (htmlLength={})",
                     to, subject, template, html.length());
 
-            Resend resend = new Resend(resendApiKey);
-            CreateEmailOptions params = CreateEmailOptions.builder()
-                    .from(effectiveMailFrom)
-                    .to(to)
-                    .subject(subject)
-                    .html(html)
-                    .build();
-            log.info("Attempting Resend email send: recipient='{}', subject='{}', template='{}', from='{}'",
-                    to, subject, template, effectiveMailFrom);
-            CreateEmailResponse response = resend.emails().send(params);
-            log.info("Resend email sent: recipient='{}', subject='{}', template='{}', resendEmailId='{}'",
-                    to, subject, template, response.getId());
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(mailFrom);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(html, true);
+
+            log.info("Sending email via Gmail SMTP: recipient='{}', subject='{}', template='{}'",
+                    to, subject, template);
+            mailSender.send(message);
+            log.info("Email sent via Gmail SMTP: recipient='{}', subject='{}', template='{}'",
+                    to, subject, template);
+        } catch (MessagingException e) {
+            log.error("Failed to build email '{}' to {} with template '{}'", subject, to, template, e);
         } catch (Exception e) {
             log.error("Failed to send email '{}' to {} with template '{}'", subject, to, template, e);
         }
-    }
-
-    private String effectiveMailFrom() {
-        return StringUtils.hasText(mailFrom) ? mailFrom : "onboarding@resend.dev";
     }
 }
