@@ -370,7 +370,7 @@ Screenshots are available in the repository under `screenshots/`.
 
 | Area | Placeholder |
 | --- | --- |
-| Live demo | `<add-live-demo-url>` |
+| Live demo | https://apexhk-frontend.onrender.com/|
 | Customer flow screenshots | `screenshots/customer/` |
 | Vendor portal screenshots | `screenshots/vendor/` |
 | Admin portal screenshots | `screenshots/admin/` |
